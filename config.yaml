@@ -1,0 +1,268 @@
+# ============================================================
+#  DAST Harness configuration
+#  Edit this file per project, then run:  python dast_scan.py
+# ============================================================
+
+project:
+  name: PayrollingApplication          # used for the project folder name
+  # Base folder where each run creates project/<name>/<date>/
+  workdir: ./projects
+
+target:
+  # The application domain to keep in scope. Anything outside this is dropped.
+  scope_domain: app.example.com
+  # Seed URLs to start crawling from (one per line in this file OR point to a file)
+  seeds:
+    - https://app.example.com
+  # Optional: path to a targets.txt instead of inline seeds (overrides seeds if set)
+  seeds_file: ""
+
+# ------------------------------------------------------------
+# Authentication — THIS IS WHAT MAKES THE SCAN MEANINGFUL.
+# Without it you only test the public login page.
+# Grab these from your browser dev-tools after logging in.
+# ------------------------------------------------------------
+auth:
+  enabled: true
+  # Sent as raw HTTP headers on every crawl + fuzz request.
+  headers:
+    - "Cookie: session=PASTE_YOUR_SESSION_COOKIE_HERE"
+    - "Authorization: Bearer PASTE_YOUR_TOKEN_HERE"
+
+# ------------------------------------------------------------
+# Tool paths. On Windows point these at your .exe files.
+# On Linux/Mac just the command name if it's on PATH.
+# ------------------------------------------------------------
+tools:
+  katana: katana            # e.g. D:\Security\katana_1.6.1_windows_amd64\katana.exe
+  nuclei: nuclei            # e.g. D:\Security\nuclei_3.8.0_windows_amd64\nuclei.exe
+  sqlmap: sqlmap            # e.g. python D:\Security\sqlmap\sqlmap.py  (see README)
+  nikto: nikto              # Perl tool; on Windows: perl D:\Security\nikto\program\nikto.pl
+  zap: zap.sh               # only needed if zap.use_docker is false
+  testssl: testssl.sh       # deep TLS scanner (bash; on Windows use WSL/Git-Bash)
+
+# ------------------------------------------------------------
+# Which phases to run. Turn any off to skip it.
+# ------------------------------------------------------------
+# ------------------------------------------------------------
+# Preset — sets `phases:` and the crawl/time budget in one go.
+#   quick    : built-in crawler + pure-Python checks, no external tools (~1-3 min)
+#   standard : adds katana, Nuclei templates, testssl          (~10-20 min)
+#   deep     : adds Nuclei DAST fuzzing, ZAP, Nikto            (hours)
+# Leave commented out to drive `phases:` below by hand.
+# Run `python dast_scan.py --list-presets` to see exactly what each one covers.
+# A preset never enables token_probe / upload / sqlmap_confirm — those write to
+# the target or forge credentials, so they stay explicit opt-ins below.
+# ------------------------------------------------------------
+# preset: quick
+
+# ------------------------------------------------------------
+# Limits — wall-clock budget and phase parallelism.
+# ------------------------------------------------------------
+limits:
+  budget_secs: 0          # 0 = no cap. Checked BETWEEN phases, so a running
+                          #   phase finishes rather than being killed mid-write
+                          #   (a scan can overshoot by up to one phase).
+  parallel: true          # run independent phases concurrently — the built-in
+                          #   probes as one group, zap/nikto/testssl as another.
+                          #   Set false for targets behind a WAF or rate limiter:
+                          #   parallel phases raise the request rate.
+
+phases:
+  crawl:            true    # Katana discovery
+  fuzz_dast:        true    # Nuclei -dast  (SQLi, XSS, SSTI, LFI, SSRF, RCE, ...)
+  template_scan:    true    # Nuclei CVE / exposure / misconfig / headers
+  zap:              true    # OWASP ZAP full active scan (fires ALL attack rules)
+  nikto:            true    # Nikto web-server scan (dangerous files / outdated / misconfig)
+  testssl:          true    # testssl.sh deep TLS/cipher/cert scan (OWASP A02 / ASVS V12)
+  secret_scan:      true    # grep JS + responses for leaked keys/tokens
+  token_analysis:   true    # decode JWTs, flag non-expiring / long-lived tokens (passive)
+  token_probe:      false   # ACTIVE broken-auth: replay/forge/tamper the token vs the API
+                            #   (GET-only but forges auth — authorised targets only; needs a valid token)
+  idor_probe:       true    # IDOR/BOLA probe (auto-discovers object URLs; A01 / ASVS V8)
+  depscan:          true    # vulnerable frontend JS libraries — black-box SCA (A06).
+                            #   uses retire.js if installed (npm i -g retire), else built-in signatures
+  cors:             true    # CORS misconfiguration probe (A05 / ASVS V3)
+  csrf:             true    # CSRF / cookie flags (SameSite/Secure/HttpOnly) + form tokens (A01/A05)
+  upload:           false   # ACTIVE malicious-file-upload probe (EICAR). Writes a harmless but
+                            #   AV-flagged test file to upload endpoints — authorised targets ONLY.
+                            #   (CWE-434 / A04; see the `upload:` block below)
+  api_spec:         false   # ingest an OpenAPI/GraphQL spec to expand endpoint coverage
+  sqlmap_confirm:   false   # auto-confirm Nuclei SQLi hits with sqlmap (slower, writes to DB)
+
+# ------------------------------------------------------------
+# Resilience — don't hammer a server that's already failing.
+# ------------------------------------------------------------
+resilience:
+  preflight: true               # health-check the target before scanning; abort if down
+  monitor: true                 # sample health during the scan; flag report if unstable
+  health_url: ""                # defaults to https://<scope_domain> if blank
+  monitor_interval: 15          # seconds between health samples
+  max_consecutive_5xx: 5        # this many 5xx/timeouts in a row = "unstable"
+  timeout: 10
+  min_free_gb: 2                # abort a scan if the disk has less free space than this (GB)
+
+# ------------------------------------------------------------
+# testssl.sh settings
+# ------------------------------------------------------------
+testssl:
+  min_severity: LOW             # LOW | MEDIUM | HIGH — floor for reported issues
+  timeout: 1800
+
+# ------------------------------------------------------------
+# IDOR / broken-access-control probe (OWASP A01 / ASVS V8)
+# Needs TWO real accounts. victim_urls are URLs that return user B's data.
+# The probe fetches each as B (baseline), as A, and unauthenticated, and
+# flags any URL where A or anon can read B's resource.
+# ------------------------------------------------------------
+idor:
+  enabled: false
+  auto_discover: true           # find object URLs (numeric/UUID ids) from the crawl
+  # Two accounts = full cross-read test. Leave user_b_headers empty to run the
+  # weaker authed-vs-anonymous test using the main auth headers as account A.
+  user_a_headers:
+    - "Cookie: session=USER_A_SESSION"
+  user_b_headers:
+    - "Cookie: session=USER_B_SESSION"
+  victim_urls:
+    - "https://app.example.com/api/employee/1002"
+    - "https://app.example.com/api/payslip/5567"
+  similarity_tolerance: 0.15    # A's response within 15% of B's size = likely same data
+
+# ------------------------------------------------------------
+# Malicious-file-upload probe (OWASP A04 / CWE-434).  ACTIVE test.
+# Submits the EICAR anti-malware test file to upload endpoints to check whether
+# the app scans/rejects it. Enable phases.upload only on authorised targets.
+#   - Acceptance (no rejection) is auto-detected -> "tentative" (verify the file
+#     is downloadable unchanged from the back office, as a pentester would).
+#   - If the app serves the file back unchanged from a URL we can see, the
+#     finding is upgraded to "confirmed".
+# ------------------------------------------------------------
+upload:
+  auto_discover: true             # walk the FULL crawl and find every <input type=file> form
+                                  #   automatically — just point `seeds` at the site URL and the
+                                  #   crawl+upload phases do the rest. No endpoint list needed.
+  max_pages: 500                  # cap on crawled pages fetched during discovery (raise for big sites)
+  # Optionally pin endpoints the crawler can't reach (e.g. the contact form):
+  #   - url: https://host/contact          # simplest: file field defaults to "file"
+  #   - url: https://host/api/attachments  # or specify the field + extra form fields:
+  #     file_field: attachment
+  #     fields: { subject: "test", message: "test" }
+  endpoints: []
+  # If you know where accepted files are served, set a template so the probe can
+  # fetch the file back and CONFIRM it was stored unscanned. {filename} is filled in.
+  download_url_template: ""       # e.g. https://host/sites/default/files/contact/{filename}
+
+# ------------------------------------------------------------
+# API spec ingestion — expand coverage to endpoints the crawler can't find.
+# Point `source` at an OpenAPI/Swagger JSON|YAML (URL or file) or a GraphQL URL.
+# ------------------------------------------------------------
+api_spec:
+  source: ""                    # e.g. https://host/openapi.json  or  ./openapi.yaml
+  format: ""                    # openapi | swagger | graphql   ("" = auto-detect)
+
+# ------------------------------------------------------------
+# OWASP ZAP settings
+# ------------------------------------------------------------
+zap:
+  use_docker: true                  # true = run via Docker (no local install needed)
+  docker_image: zaproxy/zap-stable  # current image (old owasp/zap2docker-* is retired)
+  mode: full                        # full = active scan | baseline = passive | api = from spec
+  ajax_spider: false                # headless-browser spider; powerful but the #1 cause of
+                                    #   ZAP crashing mid-scan ("connection reset"). Enable only
+                                    #   if you need JS-crawling AND have Docker RAM to spare.
+  jvm_heap: ""                      # ZAP JVM max heap. "" = auto-size to ~45% of the Docker
+                                    #   VM (clamped 2-6g). The heap MUST fit the Docker VM or
+                                    #   ZAP OOM-crashes ("Unable to connect to proxy"). Pin it
+                                    #   with e.g. 3g only if you know the VM can hold it.
+  docker_memory: ""                 # container memory cap (docker -m). "" = auto ~75% of the VM
+  shm_size: 1g                      # /dev/shm for the AJAX browser (Docker default 64m crashes it)
+  timeout: 10800
+  # api mode only:
+  # target: https://app.example.com/openapi.json
+  # api_format: openapi             # openapi | soap | graphql
+  extra_args: []                    # any extra zap-*-scan.py flags
+
+# ------------------------------------------------------------
+# Nikto settings
+# ------------------------------------------------------------
+nikto:
+  maxtime: 30m                      # cap runtime per host
+  timeout: 3600
+  tuning: ""                        # "" = all tests; or e.g. "1234567890abc" per Nikto -Tuning
+
+# ------------------------------------------------------------
+# sqlmap — data-extraction depth (impact evidence). YOUR OWN app only.
+# ------------------------------------------------------------
+sqlmap:
+  level: 2
+  risk: 1
+  current_user: true                # show current DB user / db / DBA status
+  enumerate: false                  # --dbs --tables  (lists databases + tables)
+  dump_table: ""                    # set a table name to --dump it as evidence
+  timeout: 1800
+
+# ------------------------------------------------------------
+# Scan tuning
+# ------------------------------------------------------------
+scan:
+  # Which crawler to use:
+  #   auto    = katana when installed, otherwise the built-in crawler
+  #   builtin = always the built-in crawler (stdlib only, no install needed)
+  #   katana  = require katana (falls back to built-in with a warning if absent)
+  crawler: auto
+  # Built-in crawler bounds — it stops at whichever it hits first, and always
+  # writes what it found so far.
+  builtin_max_pages: 150     # pages actually fetched
+  builtin_max_depth: 3       # link depth from the seeds
+  builtin_budget_secs: 120   # wall-clock ceiling for the crawl phase
+  builtin_max_js: 25         # JS bundles parsed for API URLs
+  crawl_depth: 5
+  rate_limit: 10            # requests/sec — keep low so you don't DoS the app (see resilience:)
+  concurrency: 5
+  # Which DAST injection classes to fuzz for. These are the REAL tags used by
+  # current nuclei-templates dast/ templates (the -dast flag scopes to fuzzing).
+  # NOTE: the old "fuzzing-req-*" tags match nothing and silently return zero.
+  dast_tags:
+    - sqli
+    - xss
+    - ssti
+    - lfi
+    - ssrf
+    - rce
+    - redirect
+    - crlf
+    - xxe
+  # Tags for the template (non-fuzzing) pass
+  template_tags:
+    - tech
+    - ssl
+    - headers
+    - exposure
+    - misconfig
+    - cve
+    - default-login
+    - panel
+    - backup
+  # Keywords used to prioritise "security-interesting" endpoints from the crawl
+  interesting_keywords:
+    - api
+    - jsonapi
+    - user
+    - admin
+    - login
+    - logout
+    - register
+    - auth
+    - password
+    - graphql
+    - swagger
+    - openapi
+    - employee
+    - payroll
+    - salary
+    - token
+    - export
+    - upload
+    - download
+    - report

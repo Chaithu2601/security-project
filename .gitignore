@@ -1,0 +1,17 @@
+# Scan artifacts — large, regenerated per run
+web/runs/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Live server log
+web/server.log
+
+# Local backups / logs
+*.bak*
+web/cleanup.log

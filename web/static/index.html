@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ailyce — Security Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== Ailyce design tokens ===== */
+:root{
+  --ash:#475969; --ash-2:#3a4a58; --storm:#6C7A87; --frost:#D1D5DC;
+  --yellow:#FFDD0A; --yellow-d:#f0cf00;
+  --blue:#5CB9E5; --lav:#8769BF; --coral:#FF694C; --amber:#FFAC09;
+  --lime:#72BF34; --emerald:#22A664; --marigold:#FFDD0C;
+  --bg:#F4F5F7; --card:#FFFFFF; --line:#E6E8EC; --line-2:#EDEFF2;
+  --ink:#1f2933; --mut:#6C7A87; --mut-2:#95a1ac;
+  --radius-card:16px; --radius:10px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.07);
+  --shadow-lg:0 8px 24px rgba(16,24,40,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--ash)}
+
+/* ===== App bar ===== */
+.appbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:14px 26px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .mark{width:34px;height:26px;flex:none}
+.brand .name{font-weight:700;font-size:17px;color:var(--ash);letter-spacing:-.01em}
+.brand .name span{color:var(--mut-2);font-weight:600}
+.appbar .manual-link{margin-left:auto;font-size:13px;font-weight:600;text-decoration:none;
+  color:var(--ash);padding:8px 14px;border-radius:8px;border:1.5px solid var(--line)}
+.appbar .manual-link:hover{border-color:var(--storm);background:#fff}
+.appbar .note{font-size:12px;color:var(--mut);
+  background:#FFF8E1;border:1px solid #F5E6A8;padding:6px 12px;border-radius:20px}
+
+/* ===== Layout ===== */
+.layout{max-width:1440px;margin:0 auto;padding:22px;
+  display:grid;grid-template-columns:minmax(360px,430px) 1fr;gap:20px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.panel{min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);
+  box-shadow:var(--shadow)}
+.card + .card{margin-top:20px}
+.card-hd{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line-2)}
+.card-hd h2{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+.card-bd{padding:20px}
+
+/* ===== Form ===== */
+.field{margin-bottom:18px}
+.field:last-child{margin-bottom:0}
+label.lbl{display:block;font-size:12px;font-weight:600;color:var(--ash);
+  margin-bottom:7px;letter-spacing:.01em}
+label.lbl .opt{color:var(--mut-2);font-weight:500}
+input[type=text],input[type=number],select,textarea{
+  width:100%;background:#fff;border:1px solid var(--line);color:var(--ink);
+  border-radius:var(--radius);padding:11px 13px;font-size:14px;font-family:inherit}
+textarea{resize:vertical;min-height:52px}
+input::placeholder,textarea::placeholder{color:var(--mut-2)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ash);
+  box-shadow:0 0 0 3px rgba(71,89,105,.12)}
+.hint{color:var(--mut);font-size:12px;margin-top:6px}
+.row-in + .row-in{margin-top:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid3 .hint{margin-top:4px;text-align:center}
+
+/* scan tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:480px){.tiles{grid-template-columns:1fr}}
+.tile{position:relative;display:flex;align-items:flex-start;gap:11px;cursor:pointer;
+  background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px 12px;
+  transition:border-color .15s, background .15s, box-shadow .15s}
+.tile:hover{border-color:var(--storm);box-shadow:var(--shadow)}
+.tile input{position:absolute;opacity:0;pointer-events:none}
+.tile .ico{width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;
+  background:var(--tc,#6C7A87)}
+.tile .ico svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.tile .tx{min-width:0;padding-right:16px}
+.tile .tx b{display:block;font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.3}
+.tile .tx small{display:block;font-size:11px;color:var(--mut);line-height:1.35;margin-top:2px}
+.tile .tick{position:absolute;top:9px;right:9px;width:17px;height:17px;border-radius:50%;
+  border:1.5px solid var(--line);display:grid;place-items:center}
+.tile.on{border-color:var(--tc);background:color-mix(in srgb, var(--tc) 7%, #fff)}
+.tile.on .tick{background:var(--tc);border-color:var(--tc)}
+.tile.on .tick::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;
+  transform:rotate(45deg) translateY(-1px)}
+
+/* scan presets */
+.presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+@media(max-width:560px){.presets{grid-template-columns:1fr 1fr}}
+.pre{position:relative;cursor:pointer;background:#fff;border:1.5px solid var(--line);
+  border-radius:12px;padding:11px 10px;text-align:center;min-height:62px;
+  display:flex;flex-direction:column;justify-content:center;
+  transition:border-color .15s,background .15s,box-shadow .15s}
+.pre:hover{border-color:var(--storm);box-shadow:var(--shadow)}
+.pre input{position:absolute;opacity:0;pointer-events:none}
+.pre b{display:block;font-size:13px;font-weight:650;color:var(--ink)}
+.pre small{display:block;font-size:10.5px;color:var(--mut);margin-top:3px;line-height:1.3}
+.pre.on{border-color:var(--ash);background:#EEF1F4}
+.pre.on b{color:var(--ash)}
+#presetDesc{color:var(--mut);font-size:12px;margin-top:8px;min-height:15px}
+#scanBox.locked{opacity:.55;pointer-events:none}
+
+/* injection pills */
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;
+  background:#fff;border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;
+  transition:border-color .15s,background .15s}
+.pill:hover{border-color:var(--storm)}
+.pill input{position:absolute;opacity:0;pointer-events:none}
+.pill .dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.pill.on{border-color:var(--ash);background:#EEF1F4;color:var(--ash);font-weight:600}
+.pill.on .dot{background:var(--emerald)}
+#injBox,#apiSpecBox{transition:opacity .2s}
+
+/* accordion sections */
+.acc{border:1px solid var(--line);border-radius:var(--radius);margin-top:12px;
+  background:var(--card);overflow:hidden}
+.acc > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:11px;
+  padding:13px 15px;font-size:13.5px;font-weight:600;color:var(--ink);user-select:none}
+.acc > summary::-webkit-details-marker{display:none}
+.acc > summary:hover{background:var(--line-2)}
+.acc > summary .chev{margin-left:auto;color:var(--mut);font-size:17px;line-height:1;
+  transition:transform .18s}
+.acc[open] > summary .chev{transform:rotate(90deg)}
+.acc > summary .ico{width:28px;height:28px;flex:none;border-radius:8px;display:grid;
+  place-items:center;background:var(--line-2)}
+.acc > summary .ico svg{width:15px;height:15px;stroke:var(--ash);fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.acc > summary .sum-sub{color:var(--mut-2);font-weight:500;font-size:12px}
+.acc > summary .badge-set{margin-left:6px;background:var(--emerald);color:#fff;
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;letter-spacing:.03em}
+.acc .acc-bd{padding:4px 15px 16px;border-top:1px solid var(--line-2)}
+.acc.flash{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,172,9,.15)}
+
+/* buttons */
+.actions{display:flex;gap:10px;margin:22px -20px -20px;padding:14px 20px;position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line-2);border-radius:0 0 var(--radius-card) var(--radius-card);box-shadow:0 -6px 16px -12px rgba(16,24,40,.25);z-index:5}.actions .btn-primary{flex:1}
+.btn{font:inherit;font-weight:600;font-size:14px;border-radius:var(--radius-sm);
+  padding:0 18px;height:48px;cursor:pointer;border:1.5px solid transparent;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.btn-primary{background:var(--yellow);color:var(--ash);flex:1}
+.btn-primary:hover{background:var(--yellow-d);box-shadow:var(--shadow-lg)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.btn-secondary{background:#fff;color:var(--ash);border-color:var(--ash)}
+.btn-secondary:hover{background:var(--ash);color:#fff}
+
+/* ===== Results: console ===== */
+.badge{margin-left:auto;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;
+  display:inline-flex;align-items:center;gap:6px}
+.badge.idle{background:#EEF1F4;color:var(--mut)}
+.badge.running{background:#FFF4D6;color:#8a6d00}
+.badge.done{background:#E3F5EC;color:#137a4a}
+.badge.error{background:#FEE9E4;color:#c23c1e}
+.badge.aborted{background:#FFF4D6;color:#8a6d00}
+#term{background:var(--ash);color:#eef1f4;border-radius:0 0 var(--radius-card) var(--radius-card);
+  margin:0;padding:16px 18px;height:330px;overflow:auto;
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word}
+#term .ok{color:#8fe0b0}#term .warn{color:#ffd76b}#term .err{color:#ff9c85}
+#term .ban{color:#9ad4f2;font-weight:600}#term .cmd{color:#aab6c1}
+#term .placeholder{color:#aab6c1}
+.spin{width:11px;height:11px;border:2px solid rgba(138,109,0,.35);border-top-color:#8a6d00;
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ===== Report ===== */
+.sevchips{display:flex;gap:8px;flex-wrap:wrap}
+.sevchip{display:inline-flex;align-items:baseline;gap:6px;font-size:12px;font-weight:600;
+  padding:6px 12px;border-radius:20px;color:#fff}
+.sevchip .n{font-size:14px;font-weight:700}
+.reportlinks{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.reportlinks a{font-size:12.5px;font-weight:500;text-decoration:none;color:var(--ash);
+  background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:var(--radius-sm)}
+.reportlinks a:hover{border-color:var(--ash);background:#F7F8FA}
+#reportFrame{width:100%;height:66vh;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+.empty{color:var(--mut);text-align:center;padding:38px 16px;font-size:13px}
+
+/* ===== Previous runs ===== */
+.runitem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);
+  border-radius:12px;margin-top:10px;cursor:pointer;transition:.15s;background:#fff}
+.runitem:first-child{margin-top:0}
+.runitem:hover{border-color:var(--ash);box-shadow:var(--shadow)}
+.runitem .rt{font-weight:600;font-size:13px;color:var(--ink)}
+.runitem .rm{color:var(--mut);font-size:12px;margin-top:1px}
+.runitem .open{margin-left:auto;color:var(--ash);font-weight:600;font-size:12px;white-space:nowrap}
+.sev-dot{font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 44 32" aria-hidden="true">
+      <path d="M14 5 L5 16 L14 27" fill="none" stroke="#475969" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M30 5 L39 16 L30 27" fill="none" stroke="#475969" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="17" y="11" width="4.5" height="4.5" rx="1" fill="#5CB9E5"/>
+      <rect x="23" y="11" width="4.5" height="4.5" rx="1" fill="#FFAC09"/>
+      <rect x="17" y="17" width="4.5" height="4.5" rx="1" fill="#72BF34"/>
+      <rect x="23" y="17" width="4.5" height="4.5" rx="1" fill="#FF694C"/>
+    </svg>
+    <div class="name">Ailyce <span>Security Scanner</span></div>
+  </div>
+  <a href="/static/manual.html" class="manual-link">Manual</a>
+  <div class="note">Only scan systems you are authorised to test</div>
+</div>
+
+<main class="layout">
+  <!-- ============ FORM ============ -->
+  <section class="panel">
+    <form class="card" id="scanForm" autocomplete="off">
+      <div class="card-hd"><h2>New scan</h2></div>
+      <div class="card-bd">
+
+        <div class="field">
+          <label class="lbl" for="url">Target URL</label>
+          <input type="text" id="url" placeholder="https://uat.example.com" required>
+          <div class="hint">The app to test. Crawling stays within this host's domain.</div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="project_name">Project name <span class="opt">(optional)</span></label>
+          <input type="text" id="project_name" placeholder="auto from URL">
+        </div>
+
+        <div class="field">
+          <label class="lbl">Scan depth</label>
+          <div class="presets" id="presetTiles"></div>
+          <div id="presetDesc"></div>
+        </div>
+
+        <details class="acc" id="accAuth">
+          <summary>
+            <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            Authentication <span class="sum-sub">— test the logged-in app</span>
+            <span class="badge-set" id="authSet" hidden>set</span>
+            <span class="chev">›</span>
+          </summary>
+          <div class="acc-bd">
+            <div class="hint" id="authHint" style="margin:2px 0 10px">Optional for Quick/Standard. <b>Required</b> for the Authenticated preset — supplying a token is your authorisation to actively test.</div>
+            <input class="row-in" type="text" id="auth_cookie" placeholder="Session cookie   e.g. session=abc123">
+            <input class="row-in" type="text" id="auth_bearer" placeholder="Bearer token">
+            <textarea class="row-in" id="auth_raw" placeholder="Extra raw headers, one per line&#10;X-Api-Key: ..."></textarea>
+          </div>
+        </details>
+
+        <details class="acc" id="accApi">
+          <summary>
+            <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>
+            API spec <span class="sum-sub">— reach endpoints the crawler can't</span>
+            <span class="badge-set" id="apiSet" hidden>set</span>
+            <span class="chev">›</span>
+          </summary>
+          <div class="acc-bd">
+            <div class="hint" style="margin:2px 0 10px">Paste an OpenAPI/Swagger/GraphQL spec and its endpoints are scanned too — under any preset.</div>
+            <input class="row-in" type="text" id="api_spec_source" placeholder="https://host/openapi.json  or  ./openapi.yaml">
+            <select class="row-in" id="api_spec_format">
+              <option value="">auto-detect format</option>
+              <option value="openapi">OpenAPI 3</option>
+              <option value="swagger">Swagger 2</option>
+              <option value="graphql">GraphQL</option>
+            </select>
+          </div>
+        </details>
+
+        <details class="acc" id="accPhases">
+          <summary>
+            <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+            Phases &amp; injection tests <span class="sum-sub" id="phasesSub">— set by preset</span>
+            <span class="chev">›</span>
+          </summary>
+          <div class="acc-bd">
+            <div class="field" id="scanBox" style="margin-bottom:14px">
+              <label class="lbl">Scans to run <span class="opt" id="scanBoxNote"></span></label>
+              <div class="tiles" id="scanTiles"></div>
+            </div>
+            <div class="field" id="injBox" style="margin-bottom:0">
+              <label class="lbl">Injection tests <span class="opt">(DAST fuzzing)</span></label>
+              <div class="pills" id="injPills"></div>
+              <div class="hint">Leave all off to fuzz for every class.</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="acc" id="accAdvanced">
+          <summary>
+            <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+            Advanced <span class="sum-sub">— ZAP mode, rate, parallelism</span>
+            <span class="chev">›</span>
+          </summary>
+          <div class="acc-bd">
+            <div class="field">
+              <label class="lbl" for="zap_mode">ZAP mode <span class="opt">(Deep scans)</span></label>
+              <select id="zap_mode">
+                <option value="full">full — spider + AJAX + active attack rules</option>
+                <option value="baseline">baseline — passive only (safe)</option>
+                <option value="api">api — from OpenAPI/GraphQL/SOAP spec</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label class="lbl">Tuning</label>
+              <div class="grid3">
+                <div><input type="number" id="rate_limit" value="10" min="1"><div class="hint">req/sec</div></div>
+                <div><input type="number" id="concurrency" value="5" min="1"><div class="hint">threads</div></div>
+                <div><input type="number" id="crawl_depth" value="5" min="1"><div class="hint">crawl depth</div></div>
+              </div>
+              <label class="pill" style="margin-top:10px">
+                <input type="checkbox" id="parallel" checked><span class="dot"></span>
+                Run independent phases in parallel</label>
+              <div class="hint">Much faster. Turn off for targets behind a WAF or rate limiter — parallel phases raise the request rate.</div>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="runBtn">Start scan</button>
+          <button type="button" class="btn btn-secondary" id="abortBtn" style="display:none">Abort</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section class="panel">
+    <div class="card">
+      <div class="card-hd"><h2>Live scan output</h2><span class="badge idle" id="statusBadge">idle</span></div>
+      <pre id="term"><span class="placeholder">Configure a scan on the left and press Start. Live engine output streams here.</span></pre>
+    </div>
+
+    <div class="card" id="reportCard" style="display:none">
+      <div class="card-hd"><h2>Report</h2><span class="badge done" id="findBadge" style="display:none"></span></div>
+      <div class="card-bd">
+        <div class="sevchips" id="sevChips"></div>
+        <div class="reportlinks" id="reportLinks"></div>
+        <iframe id="reportFrame" title="report"></iframe>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd"><h2>Previous runs</h2></div>
+      <div class="card-bd"><div id="runsList"><div class="empty">Loading…</div></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let currentJob = null, es = null, PRESETS = [];
+
+/* ---- per-scan colour + icon (brand palette; white glyphs) ---- */
+const PAL = {blue:'#5CB9E5',lav:'#8769BF',coral:'#FF694C',amber:'#FFAC09',lime:'#72BF34',emerald:'#22A664'};
+const ICONS = {
+  bolt:'<path d="M13 3 5 13h5l-1 8 8-11h-5z"/>',
+  grid:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+  shield:'<path d="M12 3 5 6v5c0 4.5 3.2 7.7 7 8.9 3.8-1.2 7-4.4 7-8.9V6z"/>',
+  server:'<path d="M4 5h16v5H4zM4 14h16v5H4z"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+  lock:'<path d="M6 10V8a6 6 0 0112 0v2"/><rect x="5" y="10" width="14" height="10" rx="2"/>',
+  key:'<circle cx="8" cy="8" r="4"/><path d="M11 11l7 7M16 16l2-2"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>',
+  pkg:'<path d="M12 3l8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  code:'<path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/>',
+  db:'<path d="M12 3c4 0 8 1 8 3s-4 3-8 3-8-1-8-3 4-3 8-3z"/><path d="M4 6v6c0 2 4 3 8 3s8-1 8-3V6M4 12v6c0 2 4 3 8 3s8-1 8-3v-6"/>',
+};
+const SCAN_META = {
+  fuzz_dast:      {c:PAL.amber,   i:'bolt'},
+  template_scan:  {c:PAL.blue,    i:'grid'},
+  zap:            {c:PAL.coral,   i:'shield'},
+  nikto:          {c:PAL.emerald, i:'server'},
+  testssl:        {c:PAL.lav,     i:'lock'},
+  secret_scan:    {c:PAL.lime,    i:'key'},
+  token_analysis: {c:PAL.amber,   i:'clock'},
+  token_probe:    {c:PAL.coral,   i:'key'},
+  idor_probe:     {c:PAL.coral,   i:'user'},
+  depscan:        {c:PAL.blue,    i:'pkg'},
+  cors:           {c:PAL.lav,     i:'globe'},
+  csrf:           {c:PAL.emerald, i:'shield'},
+  api_spec:       {c:PAL.emerald, i:'code'},
+  sqlmap_confirm: {c:PAL.amber,   i:'db'},
+};
+
+async function loadOptions(){
+  const o = await (await fetch('/api/options')).json();
+  const on = new Set(['fuzz_dast','template_scan','secret_scan','token_analysis',
+                      'testssl','depscan','cors','csrf','idor_probe']);
+  $('#scanTiles').innerHTML = o.scans.map(s=>{
+    const m = SCAN_META[s.key] || {c:'#6C7A87', i:'shield'};
+    const parts = s.label.split(/ [—-] |\(/); // short title + rest
+    const title = parts[0].trim();
+    const sub = s.label.slice(title.length).replace(/^[\s—-]+/,'').replace(/^\(/,'(');
+    return `<label class="tile" style="--tc:${m.c}">
+      <input type="checkbox" name="scan" value="${s.key}" ${on.has(s.key)?'checked':''}>
+      <span class="ico"><svg viewBox="0 0 24 24">${ICONS[m.i]}</svg></span>
+      <span class="tx"><b>${title}</b><small>${sub||''}</small></span>
+      <span class="tick"></span></label>`;
+  }).join('');
+  $('#injPills').innerHTML = o.injection_tests.map(t=>`
+    <label class="pill"><input type="checkbox" name="inj" value="${t.key}" checked>
+      <span class="dot"></span>${t.label.replace(/\s*\(.*\)/,'')}</label>`).join('');
+
+  // Presets answer the only question most users have up front: how long am I
+  // willing to wait, and what do I have installed? "Custom" reveals the full
+  // per-phase choice for anyone who wants it.
+  PRESETS = o.presets || [];
+  const short = {quick:'~1-3 min · no tools needed', standard:'~10-20 min',
+                 authenticated:'~15-25 min · needs a token', deep:'hours · active attack traffic'};
+  const nice = {authenticated:'Authenticated'};
+  $('#presetTiles').innerHTML = PRESETS.map(p=>`
+    <label class="pre"><input type="radio" name="preset" value="${p.key}"
+      ${p.key==='quick'?'checked':''}>
+      <b>${nice[p.key]||p.key[0].toUpperCase()+p.key.slice(1)}</b>
+      <small>${short[p.key]||''}</small></label>`).join('')
+    + `<label class="pre"><input type="radio" name="preset" value="">
+         <b>Custom</b><small>pick phases yourself</small></label>`;
+  $('#presetTiles').addEventListener('change', applyPreset);
+  applyPreset();
+
+  syncClasses(); syncBoxes(); loadRuns();
+
+  $('#scanTiles').addEventListener('change', ()=>{ syncClasses(); syncBoxes(); });
+  $('#injPills').addEventListener('change', e=>{
+    const p=e.target.closest('.pill'); if(p) p.classList.toggle('on', e.target.checked);
+  });
+
+  function markSet(){
+    const auth = $('#auth_cookie').value || $('#auth_bearer').value || $('#auth_raw').value.trim();
+    const api = $('#api_spec_source').value.trim();
+    $('#authSet').hidden = !auth;
+    $('#apiSet').hidden = !api;
+  }
+  ['auth_cookie','auth_bearer','auth_raw','api_spec_source']
+    .forEach(id => $('#'+id).addEventListener('input', markSet));
+  markSet();
+}
+function currentPreset(){
+  const r = document.querySelector('input[name=preset]:checked');
+  return r ? r.value : '';
+}
+function applyPreset(){
+  const key = currentPreset();
+  document.querySelectorAll('.pre').forEach(p=>
+    p.classList.toggle('on', p.querySelector('input').checked));
+  const p = PRESETS.find(x=>x.key===key);
+  // Tick the tiles the preset covers, so the choice stays visible rather than
+  // hidden behind a label — then lock them, since the preset now decides.
+  const needsToken = p && p.phases.indexOf('token_probe') !== -1;
+  if(p){
+    const set = new Set(p.phases);
+    document.querySelectorAll('input[name=scan]').forEach(i=>{ i.checked = set.has(i.value); });
+    $('#scanBox').classList.add('locked');
+    $('#scanBoxNote').textContent = '(set by preset)';
+    $('#presetDesc').textContent = p.desc;
+    if($('#phasesSub')) $('#phasesSub').textContent = '— ' + p.phases.length + ' phases, set by preset';
+  }else{
+    $('#scanBox').classList.remove('locked');
+    $('#scanBoxNote').textContent = '';
+    $('#presetDesc').textContent = 'Choose each phase yourself.';
+    if($('#phasesSub')) $('#phasesSub').textContent = '— choose your own';
+  }
+  // A preset that runs the active token probe is meaningless without a token,
+  // so surface the Authentication section instead of leaving it folded away.
+  const acc = $('#accAuth'), hint = $('#authHint');
+  if(needsToken){
+    if(acc && !acc.open){ acc.open = true; acc.classList.add('flash');
+      setTimeout(()=>acc.classList.remove('flash'), 1400); }
+    if(hint) hint.innerHTML = '<b>This preset needs a token.</b> The broken-auth probe replays and tampers it against protected endpoints — supplying one is your authorisation to actively test.';
+  }else if(hint){
+    hint.innerHTML = 'Optional for Quick/Standard. <b>Required</b> for the Authenticated preset — supplying a token is your authorisation to actively test.';
+  }
+  syncClasses(); syncBoxes();
+}
+function syncClasses(){
+  document.querySelectorAll('.tile').forEach(t=>t.classList.toggle('on', t.querySelector('input').checked));
+  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('on', p.querySelector('input').checked));
+}
+function syncBoxes(){
+  // Injection tests only matter when DAST fuzzing is on; dim them otherwise.
+  const fuzzEl = document.querySelector('input[name=scan][value=fuzz_dast]');
+  const fuzz = fuzzEl ? fuzzEl.checked : false;
+  const box = $('#injBox');
+  if(box){ box.style.opacity = fuzz?'1':'.45'; box.style.pointerEvents = fuzz?'auto':'none'; }
+}
+
+/* ---- terminal ---- */
+function classify(l){
+  if(l.trimStart().startsWith('===')) return 'ban';
+  if(l.includes('[OK]')) return 'ok';
+  if(l.includes('[WARN]')) return 'warn';
+  if(l.includes('[ERR]')) return 'err';
+  if(l.trimStart().startsWith('$')) return 'cmd';
+  return '';
+}
+function appendLine(line){
+  const t=$('#term'), s=document.createElement('span');
+  s.className=classify(line); s.textContent=line+'\n'; t.appendChild(s); t.scrollTop=t.scrollHeight;
+}
+function setBadge(st){
+  const b=$('#statusBadge'); b.className='badge '+st;
+  b.innerHTML=(st==='running'?'<span class="spin"></span> ':'')+st;
+}
+
+/* ---- start scan ---- */
+$('#scanForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const scans=[...document.querySelectorAll('input[name=scan]:checked')].map(i=>i.value);
+  const preset=currentPreset();
+  if(!scans.length && !preset){ alert('Select at least one scan type.'); return; }
+  const body={
+    url:$('#url').value.trim(),
+    project_name:$('#project_name').value.trim()||null,
+    auth_cookie:$('#auth_cookie').value.trim()||null,
+    auth_bearer:$('#auth_bearer').value.trim()||null,
+    auth_raw_headers:$('#auth_raw').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    scans,
+    preset: preset || null,
+    parallel: $('#parallel').checked,
+    injection_tests:[...document.querySelectorAll('input[name=inj]:checked')].map(i=>i.value),
+    zap_mode:$('#zap_mode').value,
+    api_spec_source:$('#api_spec_source').value.trim()||null,
+    api_spec_format:$('#api_spec_format').value||null,
+    rate_limit:+$('#rate_limit').value, concurrency:+$('#concurrency').value, crawl_depth:+$('#crawl_depth').value,
+  };
+  $('#term').innerHTML=''; $('#reportCard').style.display='none';
+  $('#runBtn').disabled=true; setBadge('running');
+  let res;
+  try{ res=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+  catch(err){ appendLine('[ERR] '+err); reset(); return; }
+  if(!res.ok){ appendLine('[ERR] '+(await res.text())); reset(); return; }
+  const {job_id}=await res.json(); currentJob=job_id;
+  $('#abortBtn').style.display='inline-flex'; stream(job_id);
+});
+function stream(jobId){
+  if(es) es.close();
+  es=new EventSource(`/api/scan/${jobId}/stream`);
+  es.onmessage=e=>appendLine(JSON.parse(e.data));
+  es.addEventListener('end',e=>{ es.close(); const m=JSON.parse(e.data);
+    setBadge(m.status); reset(); if(m.has_report) showReport(jobUrls(jobId)); loadRuns(); });
+  es.onerror=()=>{};
+}
+function reset(){ $('#runBtn').disabled=false; $('#abortBtn').style.display='none'; }
+$('#abortBtn').addEventListener('click', async ()=>{ if(currentJob) await fetch(`/api/scan/${currentJob}/abort`,{method:'POST'}); });
+
+/* ---- report ---- */
+const SEV={critical:'#FF694C',high:'#FFAC09',medium:'#FFDD0C',low:'#5CB9E5',info:'#6C7A87'};
+const SEVTX={critical:'#fff',high:'#5a3d00',medium:'#5a4d00',low:'#fff',info:'#fff'};
+function jobUrls(id){return{report:`/api/scan/${id}/report`,reportJson:`/api/scan/${id}/report.json`,download:k=>`/api/scan/${id}/download/${k}`};}
+function runUrls(rel){const q=encodeURIComponent(rel);return{report:`/api/run/report?path=${q}`,reportJson:`/api/run/report.json?path=${q}`,download:k=>`/api/run/download/${k}?path=${q}`};}
+async function showReport(u,{scroll=false}={}){
+  const card=$('#reportCard'); card.style.display='block';
+  $('#reportFrame').src=u.report;
+  $('#reportLinks').innerHTML=['html','md','json','sarif'].map(k=>`<a href="${u.download(k)}" target="_blank">⬇ ${k.toUpperCase()}</a>`).join('')
+    +`<a href="${u.report}" target="_blank">↗ open full report</a>`;
+  try{
+    const rep=await(await fetch(u.reportJson)).json(); const c=rep.meta.counts||{};
+    $('#findBadge').style.display='inline-flex'; $('#findBadge').textContent=(rep.meta.total||0)+' findings';
+    $('#sevChips').innerHTML=Object.keys(SEV).filter(s=>c[s]).map(s=>
+      `<span class="sevchip" style="background:${SEV[s]};color:${SEVTX[s]}"><span class="n">${c[s]}</span> ${s}</span>`).join('')
+      ||'<span class="sevchip" style="background:#E3F5EC;color:#137a4a">No findings</span>';
+  }catch(_){}
+  if(scroll) card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---- previous runs ---- */
+async function loadRuns(){
+  try{
+    const {runs}=await(await fetch('/api/runs')).json(); const el=$('#runsList');
+    if(!runs.length){ el.innerHTML='<div class="empty">No previous runs yet.</div>'; return; }
+    el.innerHTML=runs.map(r=>{
+      const c=r.counts||{};
+      const sev=Object.keys(SEV).filter(s=>c[s]).map(s=>`<span class="sev-dot" style="color:${SEV[s]}">${c[s]} ${s}</span>`).join(' · ')||'clean';
+      return `<div class="runitem" data-rel="${encodeURIComponent(r.rel||'')}" title="Open this report">
+        <div><div class="rt">${r.project||'?'}</div><div class="rm">${r.target||''} · ${r.date||''} · ${r.total||0} findings (${sev})</div></div>
+        <span class="open">open ↗</span></div>`;
+    }).join('');
+    el.querySelectorAll('.runitem').forEach(it=>it.addEventListener('click',()=>{
+      const rel=decodeURIComponent(it.dataset.rel); if(rel) showReport(runUrls(rel),{scroll:true});
+    }));
+  }catch(_){}
+}
+
+loadOptions();
+</script>
+</body>
+</html>

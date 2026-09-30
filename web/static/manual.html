@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ailyce — Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ash:#475969; --ash-2:#3a4a58; --storm:#6C7A87; --frost:#D1D5DC;
+  --yellow:#FFDD0A; --yellow-d:#f0cf00;
+  --blue:#5CB9E5; --lav:#8769BF; --coral:#FF694C; --amber:#FFAC09;
+  --lime:#72BF34; --emerald:#22A664; --marigold:#FFDD0C;
+  --bg:#F4F5F7; --card:#FFFFFF; --line:#E6E8EC; --line-2:#EDEFF2;
+  --ink:#1f2933; --mut:#6C7A87; --mut-2:#95a1ac;
+  --radius-card:16px; --radius:10px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.07);
+  --shadow-lg:0 8px 24px rgba(16,24,40,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+a{color:var(--ash)}
+code{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:12.5px;
+  background:#EEF1F4;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--ash-2)}
+
+/* App bar (matches index) */
+.appbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:14px 26px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand .mark{width:34px;height:26px;flex:none}
+.brand .name{font-weight:700;font-size:17px;color:var(--ash);letter-spacing:-.01em}
+.brand .name span{color:var(--mut-2);font-weight:600}
+.nav{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav a{font-size:13px;font-weight:600;text-decoration:none;color:var(--ash);
+  padding:8px 14px;border-radius:8px;border:1.5px solid transparent}
+.nav a.ghost{border-color:var(--line)}
+.nav a.ghost:hover{border-color:var(--storm);background:#fff}
+.nav a.solid{background:var(--yellow);color:var(--ash)}
+.nav a.solid:hover{background:var(--yellow-d)}
+
+/* Layout: sticky TOC + content */
+.wrap{max-width:1200px;margin:0 auto;padding:24px 22px;
+  display:grid;grid-template-columns:230px 1fr;gap:26px;align-items:start}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.toc{display:none}}
+.toc{position:sticky;top:78px}
+.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut-2)}
+.toc a{display:block;text-decoration:none;color:var(--mut);font-size:13px;
+  padding:6px 10px;border-radius:8px;border-left:2px solid transparent}
+.toc a:hover{color:var(--ash);background:#fff}
+
+.hero{background:linear-gradient(180deg,#fff, #fbfcfd);border:1px solid var(--line);
+  border-radius:var(--radius-card);box-shadow:var(--shadow);padding:26px 28px;margin-bottom:20px}
+.hero h1{margin:0 0 6px;font-size:24px;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--mut);max-width:70ch}
+.hero .warn{margin-top:14px;display:inline-block;font-size:12px;color:#8a6d00;
+  background:#FFF8E1;border:1px solid #F5E6A8;padding:6px 12px;border-radius:20px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);
+  box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.card-hd{display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--line-2)}
+.card-hd .n{width:24px;height:24px;flex:none;border-radius:7px;background:var(--ash);color:#fff;
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+.card-hd h2{margin:0;font-size:16px;font-weight:600}
+.card-bd{padding:8px 22px 22px}
+
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line-2)}
+th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut-2);font-weight:600;
+  background:#FAFBFC;position:sticky}
+tbody tr:hover{background:#FAFBFC}
+td b{color:var(--ink)}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line-2);border-radius:12px;margin-top:14px}
+.tbl-scroll table{margin-top:0}
+.tbl-scroll th:first-child,.tbl-scroll td:first-child{padding-left:16px}
+
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;
+  background:#EEF1F4;color:var(--ash);white-space:nowrap}
+.tag.v{background:color-mix(in srgb,var(--emerald) 14%,#fff);color:#12784a;border:1px solid color-mix(in srgb,var(--emerald) 30%,#fff)}
+.tag.docker{background:color-mix(in srgb,var(--blue) 16%,#fff);color:#1a6a92}
+
+.flow{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:12px;line-height:1.7;
+  background:#0f1720;color:#d7e0ea;border-radius:12px;padding:16px 18px;overflow-x:auto;white-space:pre;margin-top:14px}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pillrow .p{font-size:12px;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px}
+.pillrow .p b{color:var(--ash)}
+ul.clean{margin:14px 0 0;padding-left:18px}
+ul.clean li{margin-bottom:7px}
+.foot{color:var(--mut-2);font-size:12px;text-align:center;padding:20px 0 40px}
+.conf{display:inline-block;font-size:11px;font-weight:600;border-radius:6px;padding:2px 8px;margin-right:4px}
+.conf.c{background:#e7f6ee;color:#12784a}.conf.f{background:#fff4d6;color:#8a6d00}.conf.t{background:#f0eef8;color:#5b47a0}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <a class="brand" href="/">
+    <svg class="mark" viewBox="0 0 44 32" aria-hidden="true">
+      <path d="M14 5 L5 16 L14 27" fill="none" stroke="#475969" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M30 5 L39 16 L30 27" fill="none" stroke="#475969" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="17" y="11" width="4.5" height="4.5" rx="1" fill="#5CB9E5"/>
+      <rect x="23" y="11" width="4.5" height="4.5" rx="1" fill="#FFAC09"/>
+      <rect x="17" y="17" width="4.5" height="4.5" rx="1" fill="#72BF34"/>
+      <rect x="23" y="17" width="4.5" height="4.5" rx="1" fill="#FF694C"/>
+    </svg>
+    <div class="name">Ailyce <span>Security Scanner</span></div>
+  </a>
+  <nav class="nav">
+    <a class="ghost" href="/static/manual.html">Manual</a>
+    <a class="solid" href="/">New scan</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <aside class="toc">
+    <h4>On this page</h4>
+    <a href="#engines">Engines we use</a>
+    <a href="#flow">How a scan flows</a>
+    <a href="#scans">Scan types</a>
+    <a href="#injection">Injection tests</a>
+    <a href="#fields">Form fields</a>
+    <a href="#trust">Trust layer</a>
+    <a href="#trouble">Troubleshooting</a>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <h1>Operator Manual</h1>
+      <p>What the scanner does, which engines it runs, and how to read the results.
+         The web UI never scans itself — it writes your choices to a config and runs the
+         <code>dast_scan.py</code> engine, which orchestrates the tools below and maps
+         findings to OWASP Top&nbsp;10 (2021) / ASVS&nbsp;5.0.</p>
+      <span class="warn">Only scan systems you own or are authorised to test.</span>
+    </div>
+
+    <!-- 0. Engines -->
+    <section class="card" id="engines">
+      <div class="card-hd"><span class="n">0</span><h2>The engines we use</h2></div>
+      <div class="card-bd">
+        <p>The harness doesn't reinvent scanners — it orchestrates best-in-class open-source
+           tools plus its own lightweight probes. Versions below are the ones installed and
+           verified on the scan host.</p>
+        <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Engine</th><th>Version</th><th>What it is</th><th>How it works</th><th>What we use it for</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>nuclei</b></td><td><span class="tag v">v3.9.0</span><br><span class="tag">tpl v10.4.6</span></td>
+              <td>Fast template-driven vulnerability scanner (ProjectDiscovery).</td>
+              <td>Reads YAML templates describing a request + a match condition. In <code>-dast</code> mode it <em>fuzzes</em> crawled parameters with attack payloads and matches the response; in template mode it signature-matches known CVEs/exposures/misconfigs.</td>
+              <td>Both Nuclei phases: DAST injection fuzzing <b>and</b> CVE / exposure / misconfig scanning.</td>
+            </tr>
+            <tr>
+              <td><b>katana</b></td><td><span class="tag v">latest</span></td>
+              <td>Fast web crawler (ProjectDiscovery).</td>
+              <td>Follows links, forms and JS to enumerate the app's URLs and parameters.</td>
+              <td>Discovering the endpoint list every other phase feeds on (the implicit crawl).</td>
+            </tr>
+            <tr>
+              <td><b>nikto</b></td><td><span class="tag v">2.6.0</span></td>
+              <td>Classic web-server scanner.</td>
+              <td>Requests a large list of known-bad paths/files and inspects banners and responses.</td>
+              <td>Dangerous files, outdated server software, server misconfiguration.</td>
+            </tr>
+            <tr>
+              <td><b>testssl.sh</b></td><td><span class="tag v">3.2.4</span></td>
+              <td>Deep TLS/SSL auditor (bash).</td>
+              <td>Opens many TLS handshakes to enumerate protocols, ciphers, the cert chain and known TLS CVEs.</td>
+              <td>TLS / cert / cipher weaknesses (OWASP A02 / ASVS V12).</td>
+            </tr>
+            <tr>
+              <td><b>sqlmap</b></td><td><span class="tag v">1.10.7</span></td>
+              <td>Automated SQL-injection exploitation.</td>
+              <td>Takes a candidate injection point and runs boolean / time / error / UNION techniques to confirm and extract.</td>
+              <td>High-confidence confirmation of Nuclei's SQLi hits (optional).</td>
+            </tr>
+            <tr>
+              <td><b>OWASP ZAP</b></td><td><span class="tag docker">Docker</span></td>
+              <td>Full-featured web-app attack proxy.</td>
+              <td>Spiders the app, then fires active attack rules through a proxy. Runs via the <code>zaproxy/zap-stable</code> image — no local install.</td>
+              <td>Broad active scan as an alternative/complement to Nuclei DAST.</td>
+            </tr>
+            <tr>
+              <td><b>Built-in probes</b></td><td><span class="tag">in engine</span></td>
+              <td>Custom Python checks (no external tool).</td>
+              <td>Direct HTTP requests + response analysis.</td>
+              <td>Secret leaks, JWT/token analysis, IDOR/BOLA, CORS, CSRF/cookie flags, black-box SCA.</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p style="margin-top:14px">Every phase is guarded by a tool-availability + template-presence check, so a missing tool is <b>skipped</b>, not fatal.</p>
+      </div>
+    </section>
+
+    <!-- 1. Flow -->
+    <section class="card" id="flow">
+      <div class="card-hd"><span class="n">1</span><h2>How a scan flows</h2></div>
+      <div class="card-bd">
+        <div class="flow">Browser form ──POST /api/scan──▶ build_config() ──▶ web/runs/&lt;job&gt;.yaml
+                                          │
+                     subprocess: python dast_scan.py --config &lt;yaml&gt;
+                                          │
+     crawl (katana) ──▶ selected phases run ──▶ trust layer (_refine_findings)
+                                          │
+        web/runs/projects/&lt;name&gt;/&lt;date&gt;/{REPORT.html, report.json, .md, .sarif}</div>
+        <ul class="clean">
+          <li><b>Crawl is implicit.</b> Any phase that needs discovered endpoints auto-enables the Katana crawl first.</li>
+          <li><b>Live output</b> streams to the page via Server-Sent Events.</li>
+          <li><b>Abort</b> sends a terminate signal to the engine subprocess.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. Scan types -->
+    <section class="card" id="scans">
+      <div class="card-hd"><span class="n">2</span><h2>Scan types (the checkboxes)</h2></div>
+      <div class="card-bd">
+        <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>UI option</th><th>Engine</th><th>Purpose</th><th>How it works</th></tr></thead>
+          <tbody>
+            <tr><td><b>Nuclei DAST fuzzing (injection)</b></td><td>nuclei <code>-dast</code></td><td>Active injection bugs (SQLi/XSS/SSTI/LFI/SSRF/RCE/redirect/CRLF/XXE).</td><td>Mutates each crawled parameter with attack payloads and matches on the response (error strings, reflected markers, time delays, OOB). <b>Heaviest load on the target.</b></td></tr>
+            <tr><td><b>Nuclei templates</b></td><td>nuclei</td><td>Known CVEs, exposed panels, misconfig, missing headers.</td><td>Signature-matches community templates against discovered URLs. Low load.</td></tr>
+            <tr><td><b>OWASP ZAP active scan</b></td><td>ZAP (Docker)</td><td>Full active web-app attack suite.</td><td>Spiders + fires active rules. Modes: <code>full</code> / <code>baseline</code> (passive) / <code>api</code>.</td></tr>
+            <tr><td><b>Nikto web-server scan</b></td><td>nikto</td><td>Dangerous files, outdated server, misconfig.</td><td>Requests known-bad paths and checks banners. Noisy — trust layer filters its false patterns.</td></tr>
+            <tr><td><b>testssl.sh TLS/cipher scan</b></td><td>testssl.sh</td><td>TLS/cert/cipher weaknesses (A02 / V12).</td><td>Negotiates many handshakes to enumerate protocols, ciphers, cert chain, TLS CVEs. Network-only.</td></tr>
+            <tr><td><b>Secret / key leak scan</b></td><td>built-in</td><td>Leaked API keys/tokens in JS & responses.</td><td>Greps crawled JS and responses against secret regexes. Passive.</td></tr>
+            <tr><td><b>JWT / token lifetime analysis</b></td><td>built-in</td><td>Weak / long-lived / non-expiring JWTs.</td><td>Decodes JWTs seen in traffic, flags missing/long <code>exp</code> and weak <code>alg</code>. Read-only.</td></tr>
+            <tr><td><b>Active token / broken-auth probe</b></td><td>built-in</td><td>Broken auth (A01/A07).</td><td>Actively replays, forges and tampers the session token against the API. <b>Intrusive</b> — off by default.</td></tr>
+            <tr><td><b>IDOR / access-control probe</b></td><td>built-in</td><td>IDOR / BOLA (A01 / V8).</td><td>Auto-discovers object URLs (numeric/UUID ids), then compares authenticated vs anonymous (or user A vs B). A getting B's data → flag.</td></tr>
+            <tr><td><b>Vulnerable frontend JS libraries</b></td><td>built-in</td><td>Outdated JS libs with CVEs (A06).</td><td>Black-box: fingerprints library names/versions from loaded JS, maps to known-vuln versions.</td></tr>
+            <tr><td><b>CORS misconfiguration probe</b></td><td>built-in</td><td>Overly-permissive CORS (A05 / V3).</td><td>Sends crafted <code>Origin</code> headers, inspects <code>Access-Control-Allow-*</code> reflection.</td></tr>
+            <tr><td><b>CSRF / cookie-security check</b></td><td>built-in</td><td>Missing CSRF tokens; weak cookie flags (A01/A05).</td><td>Checks <code>SameSite/Secure/HttpOnly</code> and looks for anti-CSRF tokens on state-changing forms.</td></tr>
+            <tr><td><b>API spec ingestion</b></td><td>built-in</td><td>Expand coverage beyond the crawler.</td><td>Ingests an OpenAPI/Swagger/GraphQL spec (URL or file) and feeds its endpoints to the scanners.</td></tr>
+            <tr><td><b>sqlmap confirmation of SQLi</b></td><td>sqlmap</td><td>Confirm nuclei SQLi hits, extract proof.</td><td>Re-tests SQLi candidates for high-confidence confirmation. Slow; off by default.</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Injection -->
+    <section class="card" id="injection">
+      <div class="card-hd"><span class="n">3</span><h2>Injection test types</h2></div>
+      <div class="card-bd">
+        <p>These apply only to <b>Nuclei DAST fuzzing</b>. Tick the classes to fuzz — <b>none ticked = fuzz all</b>. Each maps to a nuclei <code>-dast</code> tag with real templates behind it:</p>
+        <div class="pillrow">
+          <span class="p"><b>sqli</b> SQL Injection · 4</span>
+          <span class="p"><b>xss</b> Cross-Site Scripting · 195</span>
+          <span class="p"><b>ssti</b> Template Injection · 24</span>
+          <span class="p"><b>lfi</b> Local File Inclusion · 3</span>
+          <span class="p"><b>ssrf</b> Server-Side Request Forgery · 2</span>
+          <span class="p"><b>rce</b> Remote Code Execution · 7</span>
+          <span class="p"><b>redirect</b> Open Redirect · 2</span>
+          <span class="p"><b>crlf</b> CRLF Injection · 1</span>
+          <span class="p"><b>xxe</b> XML External Entity · 2</span>
+        </div>
+        <p style="margin-top:14px;color:var(--mut)">Numbers = fuzzing templates matched today (<code>240</code> total). The <code>-dast</code> flag already scopes to fuzzing templates, so only these class tags are needed.</p>
+      </div>
+    </section>
+
+    <!-- 4. Fields -->
+    <section class="card" id="fields">
+      <div class="card-hd"><span class="n">4</span><h2>Form fields</h2></div>
+      <div class="card-bd">
+        <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><b>Target URL</b></td><td>Seed to crawl from. Scheme + non-standard port are honoured (fixes http-only apps).</td></tr>
+            <tr><td><b>Project name / Scope domain</b></td><td>Report label + the domain fuzzing must stay within (defaults to the URL host).</td></tr>
+            <tr><td><b>Auth: cookie / bearer / raw headers</b></td><td>Sent on every crawl + fuzz request so you scan the app <em>logged in</em>. Bearer auto-prefixes <code>Authorization: Bearer</code>.</td></tr>
+            <tr><td><b>ZAP mode</b></td><td><code>full</code> / <code>baseline</code> / <code>api</code>.</td></tr>
+            <tr><td><b>API spec source / format</b></td><td>OpenAPI/Swagger/GraphQL URL or path (used only if API-spec scan is on).</td></tr>
+            <tr><td><b>Rate limit</b></td><td>Max requests/sec to the target. <b>Lower this if the target 504s / falls over.</b></td></tr>
+            <tr><td><b>Concurrency</b></td><td>Parallel workers. Lower alongside rate limit to reduce load.</td></tr>
+            <tr><td><b>Crawl depth</b></td><td>How deep Katana follows links. Lower = faster, smaller scope.</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Trust -->
+    <section class="card" id="trust">
+      <div class="card-hd"><span class="n">5</span><h2>Trust layer — why the report is short but honest</h2></div>
+      <div class="card-bd">
+        <p>Before writing the report, the engine's <code>_refine_findings()</code> step:</p>
+        <ul class="clean">
+          <li>drops scanner artifacts (Nikto <code>ARRAY(0x..)</code> noise, testssl local-OpenSSL errors);</li>
+          <li>drops phantom-CMS XSS signatures Nikto invents;</li>
+          <li>suppresses false broken-auth "criticals" on public endpoints;</li>
+          <li>de-dupes and caps over-rated severities.</li>
+        </ul>
+        <p style="margin-top:14px">Each finding carries a confidence tier —
+          <span class="conf c">confirmed</span><span class="conf f">firm</span><span class="conf t">tentative</span>.
+          Tentatives are meant for human verification. No DAST tool is "100% accurate"; this harness trades raw volume for findings a customer can trust.</p>
+      </div>
+    </section>
+
+    <!-- 6. Troubleshooting -->
+    <section class="card" id="trouble">
+      <div class="card-hd"><span class="n">6</span><h2>Troubleshooting</h2></div>
+      <div class="card-bd">
+        <p><b>Target returns 504 during a scan.</b> The 504 comes from the <em>target's</em> gateway
+           (e.g. AWS CloudFront / ELB — check the response <code>server:</code> header), <b>not</b> from this tool.
+           It means the origin can't answer in time — usually the fuzzing load is too high:</p>
+        <ul class="clean">
+          <li>Abort the scan, wait ~60s, re-request the site. Recovers → it was the load.</li>
+          <li>Re-run with a <b>lower rate limit + concurrency</b> and a shallower <b>crawl depth</b>.</li>
+          <li>Prefer the light <b>Nuclei templates</b> pass over <b>DAST fuzzing</b> for a first look.</li>
+          <li>If it still 504s with no scan running, the site itself is down — not a tool issue.</li>
+        </ul>
+        <p style="margin-top:14px"><b>Zero findings?</b> Check the origin was actually up during the run — a 504-ing origin returns errors to every fuzz request, so there's nothing to match on.</p>
+        <p><b>ZAP does nothing?</b> It needs Docker running (no local install).</p>
+      </div>
+    </section>
+
+    <div class="foot">Ailyce Security Scanner · localhost-only · engine <span class="mono">dast_scan.py</span></div>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+# ZAP Automation Framework plan — authenticated full scan
+# Use this when zap.use_docker: false in config.yaml, i.e. you have a local
+# ZAP install and run:  zap.sh -cmd -autorun zap-plan.yaml
+#
+# It does: spider -> AJAX spider -> passive wait -> active scan -> reports.
+# Fill in the {{...}} values. For authentication, the httpHeader replacer
+# below injects your session token on every request.
+
+env:
+  contexts:
+    - name: app
+      urls:
+        - "https://app.example.com"
+      includePaths:
+        - "https://app.example.com.*"
+      excludePaths:
+        - ".*logout.*"          # don't let the scanner log itself out
+  parameters:
+    failOnError: true
+    progressToStdout: true
+
+jobs:
+  # Inject auth on every request (replace with your real header/token)
+  - type: replacer
+    parameters:
+      deleteAllRules: true
+    rules:
+      - description: auth-header
+        enabled: true
+        matchType: REQ_HEADER
+        matchString: "Authorization"
+        replacement: "Bearer PASTE_YOUR_TOKEN_HERE"
+
+  - type: spider
+    parameters:
+      context: app
+      maxDuration: 10
+      maxDepth: 10
+
+  - type: spiderAjax        # for JS-heavy / SPA apps
+    parameters:
+      context: app
+      maxDuration: 10
+      browserId: firefox-headless
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: activeScan        # fires the full attack-rule set at every endpoint
+    parameters:
+      context: app
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 120
+      policy: "Default Policy"
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: "."
+      reportFile: "zap.json"
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: "."
+      reportFile: "zap.html"
